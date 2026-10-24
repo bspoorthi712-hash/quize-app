@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Quiz App</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px 14px;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #dbeafe, #ede9fe);
+      color: #172033;
+    }
+    .app {
+      width: 100%;
+      max-width: 540px;
+      padding: 28px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 18px 45px #312e811f;
+    }
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
+    .pill {
+      background: #ede9fe;
+      color: #6d28d9;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    h1 { margin: 0 0 8px; font-size: clamp(25px, 5vw, 34px); }
+    .subtitle { margin: 0 0 24px; color: #64748b; line-height: 1.5; }
+    .progress-track {
+      height: 8px;
+      border-radius: 99px;
+      background: #e2e8f0;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    #progress {
+      height: 100%;
+      width: 0;
+      background: #7c3aed;
+      transition: width .2s ease;
+    }
+    #question { font-size: 21px; line-height: 1.4; margin: 0 0 18px; }
+    .answers { display: grid; gap: 10px; }
+    .answer {
+      width: 100%;
+      padding: 14px 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 11px;
+      text-align: left;
+      background: #fff;
+      color: #172033;
+      font-size: 16px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .answer:hover:not(:disabled) { border-color: #a78bfa; background: #faf5ff; }
+    .answer:focus-visible, button:focus-visible { outline: 3px solid #c4b5fd; outline-offset: 2px; }
+    .answer:disabled { cursor: default; opacity: 1; }
+    .answer.correct { border-color: #16a34a; background: #f0fdf4; }
+    .answer.wrong { border-color: #dc2626; background: #fef2f2; }
+    #feedback { min-height: 24px; margin: 15px 0 0; font-weight: 700; line-height: 1.4; }
+    #feedback.good { color: #15803d; }
+    #feedback.bad { color: #b91c1c; }
+    .actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+    button.primary, button.secondary {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .primary { background: #6d28d9; color: white; }
+    .primary:disabled { background: #c4b5fd; cursor: not-allowed; }
+    .secondary { background: #f1f5f9; color: #334155; }
+    .hidden { display: none !important; }
+    .result { text-align: center; padding: 10px 0 4px; }
+    .result-icon { font-size: 48px; margin-bottom: 8px; }
+    #finalScore { color: #6d28d9; font-size: 44px; font-weight: 800; margin: 14px 0; }
+    #resultMessage { color: #64748b; line-height: 1.5; }
+    @media (max-width: 420px) {
+      .app { padding: 21px; }
+      .actions button { flex: 1; }
+      #question { font-size: 19px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="quizScreen">
+      <div class="topline">
+        <span id="questionCounter">Question 1 of 8</span>
+        <span class="pill">General Knowledge</span>
+      </div>
+      <h1>Quick Quiz</h1>
+      <p class="subtitle">Test your knowledge, one question at a time.</p>
+      <div class="progress-track" aria-label="Quiz progress">
+        <div id="progress"></div>
+      </div>
+      <h2 id="question">Loading question...</h2>
+      <div id="answers" class="answers"></div>
+      <p id="feedback" aria-live="polite"></p>
+      <div class="actions">
+        <button id="restartBtn" class="secondary" type="button">Restart</button>
+        <button id="nextBtn" class="primary" type="button" disabled>Next question →</button>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="result hidden" aria-live="polite">
+      <div class="result-icon">🏆</div>
+      <h1>Quiz Completed!</h1>
+      <p class="subtitle">Here is how you did.</p>
+      <div id="finalScore">0/8</div>
+      <p id="resultMessage"></p>
+      <div class="actions">
+        <button id="playAgainBtn" class="primary" type="button">Play again</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const questions = [
+      {
+        question: "Which planet is known as the Red Planet?",
+        answers: ["Venus", "Mars", "Jupiter", "Mercury"],
+        correct: 1,
+        explanation: "Mars looks reddish because iron-rich minerals in its soil have oxidized."
+      },
+      {
+        question: "How many sides does a hexagon have?",
+        answers: ["Five", "Six", "Seven", "Eight"],
+        correct: 1,
+        explanation: "A hexagon is a polygon with six sides."
+      },
+      {
+        question: "Which ocean is the largest on Earth?",
+        answers: ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+        correct: 3,
+        explanation: "The Pacific Ocean is the largest and deepest ocean on Earth."
+      },
+      {
+        question: "What is the chemical symbol for water?",
+        answers: ["CO₂", "O₂", "H₂O", "NaCl"],
+        correct: 2,
+        explanation: "A water molecule contains two hydrogen atoms and one oxygen atom."
+      },
+      {
+        question: "Which language runs natively in web browsers?",
+        answers: ["Java", "C++", "JavaScript", "SQL"],
+        correct: 2,
+        explanation: "JavaScript is the standard scripting language supported by web browsers."
+      },
+      {
+        question: "How many minutes are in two hours?",
+        answers: ["60", "90", "120", "180"],
+        correct: 2,
+        explanation: "Each hour has 60 minutes, so two hours have 120 minutes."
+      },
+      {
+        question: "Which animal is the largest mammal?",
+        answers: ["African elephant", "Blue whale", "Giraffe", "Hippopotamus"],
+        correct: 1,
+        explanation: "The blue whale is the largest known animal and the largest mammal."
+      },
+      {
+        question: "What is 9 × 7?",
+        answers: ["56", "63", "72", "49"],
+        correct: 1,
+        explanation: "Nine groups of seven equal 63."
+      }
+    ];
+
+    const quizScreen = document.getElementById("quizScreen");
+    const resultScreen = document.getElementById("resultScreen");
+    const questionCounter = document.getElementById("questionCounter");
+    const progress = document.getElementById("progress");
+    const questionEl = document.getElementById("question");
+    const answersEl = document.getElementById("answers");
+    const feedback = document.getElementById("feedback");
+    const nextBtn = document.getElementById("nextBtn");
+    const finalScore = document.getElementById("finalScore");
+    const resultMessage = document.getElementById("resultMessage");
+
+    let currentIndex = 0;
+    let score = 0;
+    let answered = false;
+
+    function showQuestion() {
+      answered = false;
+      const item = questions[currentIndex];
+      questionCounter.textContent = `Question ${currentIndex + 1} of ${questions.length}`;
+      progress.style.width = `${(currentIndex / questions.length) * 100}%`;
+      questionEl.textContent = item.question;
+      answersEl.replaceChildren();
+      feedback.textContent = "";
+      feedback.className = "";
+      nextBtn.disabled = true;
+      nextBtn.textContent = currentIndex === questions.length - 1 ? "See results →" : "Next question →";
+
+      item.answers.forEach((answer, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "answer";
+        button.textContent = `${String.fromCharCode(65 + index)}. ${answer}`;
+        button.addEventListener("click", () => chooseAnswer(index));
+        answersEl.appendChild(button);
+      });
+    }
+
+    function chooseAnswer(selectedIndex) {
+      if (answered) return;
+      answered = true;
+
+      const item = questions[currentIndex];
+      const buttons = [...answersEl.querySelectorAll("button")];
+      buttons.forEach((button, index) => {
+        button.disabled = true;
+        if (index === item.correct) button.classList.add("correct");
+        if (index === selectedIndex && index !== item.correct) button.classList.add("wrong");
+      });
+
+      if (selectedIndex === item.correct) {
+        score++;
+        feedback.textContent = `Correct! ${item.explanation}`;
+        feedback.className = "good";
+      } else {
+        feedback.textContent = `Not quite. ${item.explanation}`;
+        feedback.className = "bad";
+      }
+      progress.style.width = `${((currentIndex + 1) / questions.length) * 100}%`;
+      nextBtn.disabled = false;
+    }
+
+    function showResults() {
+      quizScreen.classList.add("hidden");
+      resultScreen.classList.remove("hidden");
+      finalScore.textContent = `${score}/${questions.length}`;
+      const percent = Math.round((score / questions.length) * 100);
+      resultMessage.textContent = percent === 100
+        ? "Perfect score! Amazing work."
+        : percent >= 70
+          ? "Great job! You know your stuff."
+          : percent >= 40
+            ? "Good effort! Try again to improve your score."
+            : "Keep practicing—you can do even better next time.";
+    }
+
+    function restartQuiz() {
+      currentIndex = 0;
+      score = 0;
+      quizScreen.classList.remove("hidden");
+      resultScreen.classList.add("hidden");
+      showQuestion();
+    }
+
+    nextBtn.addEventListener("click", () => {
+      if (!answered) return;
+      if (currentIndex < questions.length - 1) {
+        currentIndex++;
+        showQuestion();
+      } else {
+        showResults();
+      }
+    });
+
+    document.getElementById("restartBtn").addEventListener("click", restartQuiz);
+    document.getElementById("playAgainBtn").addEventListener("click", restartQuiz);
+
+    showQuestion();
+  </script>
+</body>
+</html>
